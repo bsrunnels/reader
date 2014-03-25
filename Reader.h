@@ -24,7 +24,15 @@ using namespace mu;
 class Reader
 {
  public:
+
+  //
+  // CONSTRUCTORS & DESTRUCTORS
+  // 
+
+  // Blank constructor--do not use!
   Reader();
+
+  // 
   Reader(string filename, bool _verbose = false)
     {
       verbose = _verbose;
@@ -83,7 +91,6 @@ class Reader
       bool temp = verbose;
       try 
 	{
-	  
 	  verbose = false;
 	  Read(val, title);
 	} 
@@ -216,6 +223,12 @@ class Reader
 	{if(verbose) cout << B_ON << FG_RED << title << RESET << endl;throw(ERROR_TAG_NOT_FOUND);}
     }
 
+  //
+  // This function allows the user to specify macro values at runtime.
+  // In the input file, a runtime-set macro value may be specified by: ???, for instance
+  //    mymacro=???
+  // Then the user must specify a value for mymacro. 
+  //
   int FindMacros(int argc, char **argv)
   {
     file.clear(); file.seekg(0,ios::beg); 
