@@ -9,7 +9,9 @@
 #include <map>
 #include <array>
 #include "colors.h"
+#ifdef READER_USE_PARSER
 #include "muParser.h"
+#endif
 #include "readline/readline.h"
 
 
@@ -36,8 +38,10 @@ class Reader
   Reader(string filename, bool _verbose = false)
     {
       verbose = _verbose;
-      p.DefineConst("pi", 3.14159);
-      p.DefineConst("e", 2.71828);
+#ifdef READER_USE_PARSER
+      parser.DefineConst("pi", 3.14159);
+      parser.DefineConst("e", 2.71828);
+#endif
       file.open(filename.c_str());
       if (!file.good()) {cout << "Error: File not found" << endl; throw(ERROR_FILE_NOT_FOUND);}
       FindMacros(0,NULL);
@@ -46,8 +50,10 @@ class Reader
   Reader(string filename, int argc, char **argv, bool _verbose = false)
     {
       verbose = _verbose;
-      p.DefineConst("pi", 3.14159);
-      p.DefineConst("e", 2.71828);
+#ifdef READER_USE_PARSER
+      parser.DefineConst("pi", 3.14159);
+      parser.DefineConst("e", 2.71828);
+#endif
       file.open(filename.c_str());
       if (!file.good()) {cout << "Error: File not found" << endl; throw(ERROR_FILE_NOT_FOUND);}
       FindMacros(argc, argv);
@@ -114,8 +120,10 @@ class Reader
   int Read(double &val, string title) 
   {
     //    val = atof(FindTag(title).c_str());
-    p.SetExpr(FindTag(title));
-    val = p.Eval();
+#ifdef READER_USE_PARSER
+    parser.SetExpr(FindTag(title));
+    val = parser.Eval();
+#endif
     if (verbose) 
       cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << val << setw(5) << RESET << endl;
   };
@@ -183,7 +191,9 @@ class Reader
     };
 
  private:
-  Parser p;
+#ifdef READER_USE_PARSER
+  Parser parser;
+#endif
   bool verbose;
   ifstream file;
   map<string,string> macros;
@@ -262,15 +272,19 @@ class Reader
 		    cout << "Macro set: "<< macroname << " = " << macroval << endl;
 		  }
 	      }
+#ifdef READER_USE_PARSER
 	    try
 	      {
-		p.SetExpr(macroval);
-		macros.insert(make_pair(macroname, to_string(p.Eval())));
+		parser.SetExpr(macroval);
+		macros.insert(make_pair(macroname, to_string(parser.Eval())));
 	      }
 	    catch(Parser::exception_type &err)
 	      {
 		macros.insert(make_pair(macroname, macroval));
 	      }
+#else
+	    macros.insert(make_pair(macroname,macroval));
+#endif
 	  }
       }
   }
