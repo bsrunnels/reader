@@ -12,8 +12,9 @@
 #ifdef READER_USE_PARSER
 #include "muParser.h"
 #endif
+#ifdef READER_USE_READLINE
 #include "readline/readline.h"
-
+#endif
 
 #define ERROR_TAG_NOT_FOUND 1
 #define ERROR_VECTOR_TOO_SHORT 2
@@ -268,7 +269,13 @@ class Reader
 		  }
 		if (!found)
 		  {
+#ifdef READER_USE_READLINE
 		    macroval = readline(("Please set a value for " + macroname + ": ").c_str());
+#else
+		    cout << "Please set a value for " << macroname << ": ";
+		    macroval << cin;
+		    cout << endl;
+#endif
 		    cout << "Macro set: "<< macroname << " = " << macroval << endl;
 		  }
 	      }
