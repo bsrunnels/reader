@@ -1,314 +1,137 @@
-#ifndef READER_D
-#define READER_D
-
+#ifndef READER_H
+#define READER_H
 #include <iostream>
-#include <iomanip>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <string>
-#include <map>
-#include <array>
-#include "colors.h"
-#ifdef READER_USE_PARSER
+#include <stdexcept>
+#include <stdlib.h>
+#include "Translators.h"
+#include "Exception.h"
 #include "muParser.h"
-#endif
-#ifdef READER_USE_READLINE
-#include "readline/readline.h"
-#endif
-
-#define ERROR_TAG_NOT_FOUND 1
-#define ERROR_VECTOR_TOO_SHORT 2
-#define ERROR_FILE_NOT_FOUND 3
-#define ERROR_DEFINED_WITH_NO_VALUE 4
 
 using namespace std;
-using namespace mu;
 
 class Reader
 {
- public:
-
-  //
-  // CONSTRUCTORS & DESTRUCTORS
-  // 
-
-  // Blank constructor--do not use!
-  Reader();
-
-  // 
-  Reader(string filename, bool _verbose = false)
-    {
-      verbose = _verbose;
-#ifdef READER_USE_PARSER
-      parser.DefineConst("pi", 3.14159);
-      parser.DefineConst("e", 2.71828);
-#endif
-      file.open(filename.c_str());
-      if (!file.good()) {cout << "Error: File not found" << endl; throw(ERROR_FILE_NOT_FOUND);}
-      FindMacros(0,NULL);
-    };
-
-  Reader(string filename, int argc, char **argv, bool _verbose = false)
-    {
-      verbose = _verbose;
-#ifdef READER_USE_PARSER
-      parser.DefineConst("pi", 3.14159);
-      parser.DefineConst("e", 2.71828);
-#endif
-      file.open(filename.c_str());
-      if (!file.good()) {cout << "Error: File not found" << endl; throw(ERROR_FILE_NOT_FOUND);}
-      FindMacros(argc, argv);
-    };
-
-  ~Reader()
-    {file.close();};
-
-  template <size_t cols>
-    int ReadData(vector<array<double,cols> > &val)
+public:
+  Reader() {variableDelimiter="$";commentDelimiter="#";lineOverflowDelimiter="\\";readFileAndStoreData();}
+  Reader(string _filename, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
+    filename(_filename), 
+    variableDelimiter(_variableDelimiter), 
+    commentDelimiter(_commentDelimiter), 
+    lineOverflowDelimiter(_lineOverflowDelimiter)
   {
-    file.clear(); file.seekg(0,ios::beg); 
-      string line, token;
-      string ret; ret = "";
-      int cont_delim;
-      getline(file,line);
-      while (!file.eof())
-	{
-	  int comment = line.find("#");
-	  if (comment != string::npos)
-	    continue;   // In a data file, only allow full line comments
-	  istringstream iss(line);
-	  string token;
-	  array<double, 2> row;
-	  for (int j=0; j<2; j++)
-	    {
-	      iss >> token;
-	      row[j] = atof(token.c_str());
-	      if (verbose) cout << row[j] << " ";
-	    }
-	  if (verbose) cout << endl;
-	  val.push_back(row);
-	  getline(file, line);
-	}
+    ifstream test(filename.c_str());
+    if(!test)
+      READER_NEW_EXCEPTION("File \""<<filename<<"\" not found")
+    readFileAndStoreData();
   }
 
-  // Allow for a default value
-  template <class Type>
-    int Read(Type &val, string title, Type def) 
-    {
-      bool temp = verbose;
-      try 
-	{
-	  verbose = false;
-	  Read(val, title);
-	} 
-      catch (int err) 
-	{
-	  verbose = temp;
-	  val = def;
-	  if (verbose)
-	    cout << setw(5) << FG_YELLOW << B_ON << left << setw(20) << title << std::setw(50) << right << val << setw(5) << RESET << endl;
-	}
-      verbose = temp;
-    };
-
-  int Read(int &val, string title) 
+  bool Find(const string varName)
   {
-    val = atoi(FindTag(title).c_str());
-    if (verbose) 
-      cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << val << setw(5) << RESET << endl;
-  };
+    if (variables.find(varName) == variables.end())
+      return false;
+    else
+      return true;
+  }
 
-  int Read(double &val, string title) 
+  template<class Type>
+  void Read(const string varName, Type *varValue, Interpreter<Type> interpreter = Interpreter<Type>())
   {
-    //    val = atof(FindTag(title).c_str());
-#ifdef READER_USE_PARSER
-    parser.SetExpr(FindTag(title));
-    val = parser.Eval();
-#endif
-    if (verbose) 
-      cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << val << setw(5) << RESET << endl;
-  };
-
-  int Read(string &val, string title)
+    READER_TRY;
+    if (variables.find(varName) == variables.end())
+      READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
+    interpreter(variables[varName], varValue);
+    READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
+  }
+  
+  template<class Type>
+  Type Read(const string varName, Interpreter<Type> interpreter = Interpreter<Type>())
   {
-    val = FindTag(title);
-    if (verbose) 
-      cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << val << setw(5) << RESET << endl;
-  };
+    READER_TRY;
+    if (variables.find(varName) == variables.end())
+      READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
+    Type retValue;
+    interpreter(variables[varName],&retValue);
+    return retValue;
+    READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
+  }
 
-  template <class EigenMatrix>
-    int Read(EigenMatrix &val, string title)
+  template<class Type>
+  Type Read(const string varName, Type defaultValue, Interpreter<Type> interpreter = Interpreter<Type>())
   {
-    string in = FindTag(title), token;
-    istringstream iss(in);
-    int rows = val.rows(); int cols = val.cols();
-    for (int i=0; i<rows; i++)
-      for (int j=0; j<cols; j++)
-	if (iss >> token)
-	  {val(i,j) = atof(token.c_str()); }
-	else
-	  {cout << "Error: vector \"" << title << "\" too short" << endl; throw(ERROR_VECTOR_TOO_SHORT);}
-    if (verbose) 
-      if (val.cols() == 1) 
-	{
-	  stringstream ss;
-	  ss << val.transpose().row(0);
-	  cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << ss.str()  << setw(5) << RESET << endl;
-	}
-      else if (val.rows() == 1) 
-	{
-	  stringstream ss;
-	  ss << val.transpose().row(0);
-	  cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << ss.str() << setw(5) << RESET << endl;
-	}
-      else 
-	for (int i=0;i<val.rows();i++)
-	  if (i==0)
-	    {
-	      stringstream ss;
-	      ss << val.transpose().row(0);
-	      cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << title << std::setw(50) << right << ss.str() << setw(5) << RESET << endl;
-	    }
-	  else
-	    {
-	      stringstream ss;
-	      ss << val.transpose().row(0);
-	      cout << setw(5) << FG_GREEN << B_ON << left << setw(20) << "" << std::setw(50) << right << ss.str() << setw(5) << RESET << endl;
-	    }
-  };
+    READER_TRY;
+    if (variables.find(varName) == variables.end())
+      return defaultValue;
+    else
+      {
+	Type retValue;
+	interpreter(variables[varName],&retValue);
+	return retValue;
+      }
+    READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
+  }
 
-  template <int size>
-    int Read(double val[size][size][size], string title)
-    {
-      string in = FindTag(title), token;
-      istringstream iss(in);
-      for (int i=0; i<size; i++)
-	for (int j=0; j<size; j++)
-	  for (int k=0; k<size; k++)
-	    if (iss >> token)
-	      {val[i][j][k] = atof(token.c_str()); }
-	    else
-	      {cout << "Error: matrix \"" << title << "\" too short" << endl; throw(ERROR_VECTOR_TOO_SHORT);}
-    };
-
- private:
-#ifdef READER_USE_PARSER
-  Parser parser;
-#endif
-  bool verbose;
-  ifstream file;
-  map<string,string> macros;
-  string FindTag(string title)
-    {
-      file.clear(); file.seekg(0,ios::beg); 
-      string line, token;
-      string ret; ret = "";
-      int cont_delim;
-      while (!file.eof())
-	{
-	  getline(file, line);
-	  int comment = line.find("#");
-	  if (comment != string::npos)
-	    line.replace(comment, string::npos, "");
-	  istringstream iss(line);
-	  iss >> token;
-	  if (token == title)
-	    //if (line.find(title) != string::npos)
-	    {
-	      ret = ret + line;
-	      while ((cont_delim=ret.find("...")) != string::npos)
-	      	{
-	      	  ret.erase(cont_delim, ret.size() - cont_delim);  // remove delimiting \
-	      	  //getline(file, line); // get next line
-	      	  getline(file, line); // get next line
-		  int comment = line.find("#");
-		  if (comment != string::npos)
-		    line.replace(comment, string::npos, "");
-	      	  ret = ret + line;  // add next to return value
-	      	}
-	      ret.erase(0,title.size()+1);
-	      return MacroReplace(ret);
-	    }
-	}
-      if (file.eof()) 
-	{if(verbose) cout << B_ON << FG_RED << title << RESET << endl;throw(ERROR_TAG_NOT_FOUND);}
-    }
-
-  //
-  // This function allows the user to specify macro values at runtime.
-  // In the input file, a runtime-set macro value may be specified by: ???, for instance
-  //    mymacro=???
-  // Then the user must specify a value for mymacro. 
-  //
-  int FindMacros(int argc, char **argv)
+private: // Private member functions
+  int readFileAndStoreData()
   {
-    file.clear(); file.seekg(0,ios::beg); 
     string line;
-    string macroname;
-    string macroval;
-    while (!file.eof())
+    ifstream inputFile(filename.c_str());
+    while (getline(inputFile,line))
       {
-	getline(file, line);
-	int comment = line.find("#");
-	if (comment != string::npos)
-	  line.replace(comment, string::npos, "");
-	int divide = line.find("=");
-	if (divide != string::npos)
+	// 0. Strip of all comments
+	if (line.find(commentDelimiter) != string::npos)
+	  line.resize(line.find(commentDelimiter));
+
+	// 1. Mash multilines togethern
+	if (line.find(lineOverflowDelimiter) != string::npos)
 	  {
-	    macroname = line.substr(0,divide);
-	    macroval = line.substr(divide+1,line.size()-divide);
-	    if (macroval.find("???") != string::npos)
+	    string anotherLine;
+	    do 
 	      {
-		bool found = false;
-		for (int i=0; i<argc; i++)
-		  {
-		    string arg(argv[i]);
-		    if(arg.find("-D"+macroname) != string::npos)
-		      if (i<(argc-1)) {macroval = argv[i+1];found=true;continue;}
-		      else {cout << "Error: " << macroname << "defined in call but has no value" << endl; throw(ERROR_DEFINED_WITH_NO_VALUE); }
-		  }
-		if (!found)
-		  {
-#ifdef READER_USE_READLINE
-		    macroval = readline(("Please set a value for " + macroname + ": ").c_str());
-#else
-		    cout << "Please set a value for " << macroname << ": ";
-		    getline(cin, macroval);
-		    cout << endl;
-#endif
-		    cout << "Macro set: "<< macroname << " = " << macroval << endl;
-		  }
+		line.resize(line.find(lineOverflowDelimiter));
+		getline(inputFile,anotherLine);
+		line += anotherLine;
 	      }
-#ifdef READER_USE_PARSER
-	    try
-	      {
-		parser.SetExpr(macroval);
-		macros.insert(make_pair(macroname, to_string(parser.Eval())));
-	      }
-	    catch(Parser::exception_type &err)
-	      {
-		macros.insert(make_pair(macroname, macroval));
-	      }
-#else
-	    macros.insert(make_pair(macroname,macroval));
-#endif
+	    while (line.find(lineOverflowDelimiter)!=string::npos);
 	  }
-      }
-  }
-  string MacroReplace(string input)
-  {
-    string output = input;
-    map<string,string>::iterator pmacros = macros.begin();
-    for(pmacros=macros.begin();pmacros != macros.end(); pmacros++)
-      {
-	int loc = output.find(pmacros->first);
-	while (loc != string::npos)
+
+	// 2. Store all variable declarations in the map
+	if (line.find(variableDelimiter) != string::npos)
 	  {
-	    output.replace(loc,(pmacros->first).size(),pmacros->second);
-	    loc = output.find(pmacros->first);
+	    istringstream iss(line); 
+	    string variableLabel; iss >> variableLabel;
+	    while(variableLabel.find(variableDelimiter) != string::npos)
+	      variableLabel.replace(variableLabel.find(variableDelimiter), variableDelimiter.size(), "");
+	    string variableValue; string token;
+	    iss >> variableValue;
+	    while (iss>>token)
+	      variableValue += " " + token;
+	    
+	    // 2.1 Replace all macros,
+	    map<string,string>::iterator varIterator;
+	    for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
+	      {
+		string macroName = variableDelimiter + varIterator->first;
+		while(variableValue.find(macroName) != string::npos)
+		  variableValue.replace(variableValue.find(macroName), macroName.size(), varIterator->second);
+	      }
+	    variables.insert(make_pair(variableLabel,variableValue));
 	  }
+	// TODO: 3. Evaluate mathematical expressions
       }
-    return output;
+    inputFile.close();
   }
+
+private: // Private variables
+  string filename;
+  string variableDelimiter;
+  string commentDelimiter;
+  string lineOverflowDelimiter;
+  map<string,string> variables;
+  
 };
+
 #endif
