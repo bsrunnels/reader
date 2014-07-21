@@ -38,9 +38,10 @@ public:
   }
 
   template<class Type>
-  void Read(const string varName, Type *varValue, Interpreter<Type> interpreter = Interpreter<Type>())
+  void Read(const string varName, Type *varValue)
   {
     READER_TRY;
+    Interpreter<Type> interpreter;
     if (variables.find(varName) == variables.end())
       READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
     interpreter(variables[varName], varValue);
@@ -48,9 +49,10 @@ public:
   }
   
   template<class Type>
-  Type Read(const string varName, Interpreter<Type> interpreter = Interpreter<Type>())
+  Type Read(const string varName)
   {
     READER_TRY;
+    Interpreter<Type> interpreter;
     if (variables.find(varName) == variables.end())
       READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
     Type retValue;
@@ -60,9 +62,10 @@ public:
   }
 
   template<class Type>
-  Type Read(const string varName, Type defaultValue, Interpreter<Type> interpreter = Interpreter<Type>())
+  Type Read(const string varName, Type defaultValue)
   {
     READER_TRY;
+    Interpreter<Type> interpreter;
     if (variables.find(varName) == variables.end())
       return defaultValue;
     else
@@ -74,18 +77,89 @@ public:
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
 
+  template<class Type>
+  Type Read(const string varName, int argc, char **argv)
+  {
+    READER_TRY;
+    Interpreter<Type> interpreter;
+    if (variables.find(varName) == variables.end())
+      {
+	string varValue;
+	if (searchCommandLineArgsForVariable(varName,varValue,argc,argv))
+	  {
+	    Type retValue;
+	    interpreter(varValue, &retValue);
+	    return retValue;
+	  }
+	else
+	  READER_NEW_EXCEPTION("Variable \""+ varValue + "\" not defined and no default specified");
+      }
+    else
+      {
+	Type retValue;
+	interpreter(variables[varName],&retValue);
+	return retValue;
+      }
+    READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
+  }
+
+  template<class Type>
+  Type Read(const string varName, Type defaultValue, int argc, char **argv)
+  {
+    READER_TRY;
+    Interpreter<Type> interpreter;
+    if (variables.find(varName) == variables.end())
+      {
+	string varValue;
+	if (searchCommandLineArgsForVariable(varName,varValue,argc,argv))
+	  {
+	    Type retValue;
+	    interpreter(varValue, &retValue);
+	    return retValue;
+	  }
+	else
+	  return defaultValue;
+      }
+    else
+      {
+	Type retValue;
+	interpreter(variables[varName],&retValue);
+	return retValue;
+      }
+    READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
+  }
+
+
 private: // Private member functions
+  bool searchCommandLineArgsForVariable(string varName, string &varValue, int argc, char **argv)
+  {
+    READER_TRY;
+    for (int i=0; i<argc; i++)
+      {
+	string line(argv[i]);
+	if (line.find("-D"+varName+"=") == 0)
+	  {
+	    varValue= line.replace(0, varName.size()+3, "");
+	    return true;
+	  }
+      }
+    return false;
+    READER_CATCH;
+  }
+
   int readFileAndStoreData()
   {
     string line;
     ifstream inputFile(filename.c_str());
     while (getline(inputFile,line))
       {
-	// 0. Strip of all comments
+	// 0. Strip of all comments and remove excess whitespace
 	if (line.find(commentDelimiter) != string::npos)
 	  line.resize(line.find(commentDelimiter));
+	while (line.find("  ") != string::npos)
+	  line.replace(line.find("  "), 2, " ");
 
-	// 1. Mash multilines togethern
+	// 1. Mash multilines together
 	if (line.find(lineOverflowDelimiter) != string::npos)
 	  {
 	    string anotherLine;
@@ -98,7 +172,17 @@ private: // Private member functions
 	    while (line.find(lineOverflowDelimiter)!=string::npos);
 	  }
 
-	// 2. Store all variable declarations in the map
+
+	// 2. Include other files
+	string include("include ");
+	if (line.find(include) == 0)
+	  {
+	    string includeFileName = line.replace(line.find(include),include.size(),"");
+	    Reader includeReader(includeFileName, variableDelimiter, commentDelimiter,lineOverflowDelimiter);
+	    variables.insert(includeReader.variables.begin(),includeReader.variables.end());
+	  }
+
+	// 3. Store all variable declarations in the map
 	if (line.find(variableDelimiter) != string::npos)
 	  {
 	    istringstream iss(line); 
@@ -110,7 +194,7 @@ private: // Private member functions
 	    while (iss>>token)
 	      variableValue += " " + token;
 	    
-	    // 2.1 Replace all macros,
+	    // 3.1 Replace all macros,
 	    map<string,string>::iterator varIterator;
 	    for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
 	      {
@@ -120,9 +204,10 @@ private: // Private member functions
 	      }
 	    variables.insert(make_pair(variableLabel,variableValue));
 	  }
-	// TODO: 3. Evaluate mathematical expressions
+
       }
     inputFile.close();
+    return 0;
   }
 
 private: // Private variables
