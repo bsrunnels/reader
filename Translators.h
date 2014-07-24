@@ -1,3 +1,6 @@
+#ifndef READER_TRANSLATORS_H
+#define READER_TRANSLATORS_H
+
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -6,13 +9,13 @@
 #include <string>
 #include <stdexcept>
 #include <stdlib.h>
+#include <cstring>
 
 #include "Exception.h"
 
 using namespace std;
 
 template<class T> struct Interpreter;
-
 
 #ifdef MUPARSER
 #include "muParser.h"
@@ -39,7 +42,7 @@ double EvaluateMath(const string varUnparsed)
 #endif
 
 //
-// string
+// Strings
 // 
 
 template<> struct Interpreter<string>
@@ -52,6 +55,16 @@ template<> struct Interpreter<string>
   }
 };
 
+template<> struct Interpreter<char *>
+{
+  void operator() (const string varUnparsed, char **varParsed)
+  {
+    READER_TRY;
+    *varParsed = (char*)malloc(varUnparsed.size());
+    memcpy(*varParsed, varUnparsed.c_str(), varUnparsed.size()+1);
+    READER_CATCH_MSG("Error parsing string: " << varUnparsed);
+  }
+};
 
 //
 // integer
@@ -141,3 +154,4 @@ template<> struct Interpreter<vector<double> >
 
 
 
+#endif

@@ -1,0 +1,11 @@
+$test_cpp_string    This is a C++ string
+$test_c_string      This is a C string
+$test_int           8
+$test_float         3.14
+$test_double        3.14159265
+$test_double_vector 0.1 1.1 \\
+                    2.1
+
+$test_struct {
+    $test_struct_double  2.71828
+}
