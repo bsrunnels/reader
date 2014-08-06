@@ -4,8 +4,18 @@
 
 using namespace std;
 
+namespace Reader
+{
 namespace StringUtils
 {
+int replaceFirst(string &str, const string before, const string after)
+{
+  READER_TRY;
+  str.replace(str.find(before), before.size(), after);
+  return 0;
+  READER_CATCH;
+}
+
 int replaceAll(string &str, const string before, const string after)
 {
   READER_TRY;
@@ -35,7 +45,6 @@ bool beginsWith(string &str, const string find)
   if (str.find(find) == 0) return true;
   else return false;
 }
-
 }
-
+}
 #endif

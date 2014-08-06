@@ -5,15 +5,28 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <algorithm>
 #include <stdexcept>
 #include <stdlib.h>
 #include "Translators.h"
 #include "Exception.h"
+#include "Warning.h"
 #include "Color.h"
 #include "muParser.h"
 #include "StringUtils.h"
 
 using namespace std;
+
+#define READER_DEPRICATED true
+
+namespace Reader
+{
+
+enum VariableStatus
+  {
+    ACTIVE,
+    DEPRICATED
+  };
 
 class Reader
 {
@@ -53,17 +66,39 @@ public:
   // 
   // Finders
 
-  bool Find(const string varName)
+  bool Find(const string varName, VariableStatus status=ACTIVE)
   {
+    UsedVariable(varName);
     string varValue;
     if (argc && searchCommandLineArgsForVariable(varName,varValue,argc,argv))
-      return true;
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return true;
+      }
     if (variables.find(varName) != variables.end())
-      return true;
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return true;
+      }
+    if (structs.find(varName) != structs.end())
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return true;
+      }
     else
       return false;
   }
-
+  bool Find(const string structName, const string varName, VariableStatus status=ACTIVE)
+  {
+    UsedStruct(structName,varName);
+    if (structs[structName].find(varName) != structs[structName].end())
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName  << " depricated, consider changing");
+	return true;
+      }
+    else
+      return false;
+  }
 
   // 
   // Variable Readers
@@ -72,6 +107,7 @@ public:
   void Read(const string varName, Type *varValue)
   {
     READER_TRY;
+    UsedVariable(varName);
     Interpreter<Type> interpreter;
     if (variables.find(varName) != variables.end())
       interpreter(variables[varName], varValue);
@@ -80,9 +116,10 @@ public:
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
   template<class Type>
-  Type Read(const string varName)
+  Type Read(const string varName, VariableStatus status=ACTIVE)
   {
     READER_TRY;
+    UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
     string varValue;
@@ -101,13 +138,14 @@ public:
       }
     // Can't find variable: scream at user
     else
-      READER_NEW_EXCEPTION("Variable \""+ varValue + "\" not defined and no default specified");
+      READER_NEW_EXCEPTION("Variable \""+ varName + "\" not defined and no default specified");
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
   template<class Type>
-  Type Read(const string varName, Type defaultValue)
+  Type Read(const string varName, Type defaultValue, VariableStatus status=ACTIVE)
   {
     READER_TRY;
+    UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
     string varValue;
@@ -115,6 +153,7 @@ public:
       {
 	Type retValue;
 	interpreter(varValue, &retValue);
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
 	return retValue;
       }
     // Next attempt: is it located in the file?
@@ -122,12 +161,15 @@ public:
       {
 	Type retValue;
 	interpreter(variables[varName],&retValue);
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
 	return retValue;
       }
     // All else fails: return default value
     else
-      return defaultValue;
-
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return defaultValue;
+      }
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
 
@@ -139,15 +181,76 @@ public:
   void Read(const string structName, const string varName, Type *varValue)
   {
     READER_TRY;
+    UsedStruct(structName,varName);
     Interpreter<Type> interpreter;
     if (structs.find(structName) == structs.end()) 
       READER_NEW_EXCEPTION("Struct \"" << varName << "\" not defined and no default specified");
     if (structs[structName].find(varName) == structs[structName].end())
-      READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
+      READER_NEW_EXCEPTION("Variable \"" << structName << "." << varName << "\" not defined and no default specified");
     interpreter(structs[structName][varName], varValue);
-    READER_CATCH_MSG("Error occurred while reading struct \"" << varName << "\"");
+    READER_CATCH_MSG("Error occurred while reading \"" << structName << "." << varName << "\"");
   }
 
+  template<class Type>
+  Type Read(const string structName, const string varName)
+  {
+    READER_TRY;
+    UsedStruct(structName,varName);
+    Type retValue;
+    Read<Type>(structName, varName, &retValue);
+    return retValue;
+    READER_CATCH;
+  }
+
+  template<class Type>
+  Type Read(const string structName, const string varName, Type defaultValue, VariableStatus status=ACTIVE)
+  {
+    READER_TRY;
+    UsedStruct(structName,varName);
+    if (!Find(structName, varName))
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return defaultValue;
+      }
+    else
+      {
+	Type retValue;
+	Read<Type>(structName, varName, &retValue);
+	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
+	return retValue;
+      }
+    READER_CATCH;
+  }
+
+
+  void PrintUnusedVariableWarnings()
+  {
+    for (map<string,string>::iterator pVariables = variables.begin();
+	 pVariables != variables.end();
+	 pVariables++)
+      {
+	if (find(usedVariables.begin(), usedVariables.end(), pVariables->first) == usedVariables.end())
+	  READER_WARNING("Variable " << READER_COLOR_FG_BLUE << pVariables->first << READER_COLOR_RESET << " specified but not used");
+      }
+
+    for (map<string,map<string,string> >::iterator pStructs = structs.begin();
+	 pStructs != structs.end();
+	 pStructs++)
+      {
+	for (map<string,string>::iterator pStructVariables = pStructs->second.begin();
+	     pStructVariables != pStructs->second.end();
+	     pStructVariables++)
+	  {
+	    
+	    if (find(usedStructs[pStructs->first].begin(), usedStructs[pStructs->first].end(), pStructVariables->first) == usedStructs[pStructs->first].end())
+	      READER_WARNING("Variable " 
+			     << READER_COLOR_FG_BLUE << pStructs->first 
+			     << READER_COLOR_RESET << "." 
+			     << READER_COLOR_FG_BLUE << pStructVariables->first 
+			     << READER_COLOR_RESET << " specified but not used");
+	  }
+      }
+  }
 
 private: // Private member functions
 
@@ -160,6 +263,11 @@ private: // Private member functions
 	if (line.find("-D"+varName+"=") == 0)
 	  {
 	    varValue= line.replace(0, varName.size()+3, "");
+	    return true;
+	  }
+	else if (line.find("-D"+varName) == 0)
+	  {
+	    varValue="";
 	    return true;
 	  }
       }
@@ -219,12 +327,25 @@ private: // Private member functions
 		if (!getline(inputFile,line))
 		  READER_NEW_EXCEPTION("File ended while reading struct");
 
-		// Remove comments
-		StringUtils::deleteAfter(line,commentDelimiter); 
+		// Get rid of all the comments and whitespace
+		StringUtils::deleteAfter(line,commentDelimiter);
+		StringUtils::replaceAll(line, "  ", " ");
 
+		// Include any additional files
+		if (line.find(include) != string::npos)
+		  {
+		    StringUtils::replaceFirst(line,"include","");
+		    StringUtils::replaceAll(line," ","");
+		    Reader includeReader(line, variableDelimiter, commentDelimiter,lineOverflowDelimiter);
+		    structVariables.insert(includeReader.variables.begin(),includeReader.variables.end());
+		    continue;
+		  }
+
+		// Does this line even contain a variable?
 		if (!StringUtils::contains(line,variableDelimiter))
 		  continue;
 
+		// File away the variable Label and Value into strings
 		istringstream iss(line); 
 		string variableLabel; iss >> variableLabel;
 		if (!StringUtils::beginsWith(variableLabel,variableDelimiter))
@@ -234,8 +355,17 @@ private: // Private member functions
 		iss >> variableValue;
 		while (iss>>token)
 		  variableValue += " " + token;
-		
-		// TODO: replace macros, maybe?
+
+		// Replace Macros
+		map<string,string>::iterator varIterator;
+		for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
+		  {
+		    string macroName = variableDelimiter + varIterator->first;
+		    if (variableValue.find(macroName) != string::npos)
+		      UsedVariable(varIterator->first);
+		    while(variableValue.find(macroName) != string::npos)
+		      variableValue.replace(variableValue.find(macroName), macroName.size(), varIterator->second);
+		  }
 
 		structVariables.insert(make_pair(variableLabel, variableValue));
 
@@ -262,6 +392,8 @@ private: // Private member functions
 	    for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
 	      {
 		string macroName = variableDelimiter + varIterator->first;
+		if (variableValue.find(macroName) != string::npos)
+		  UsedVariable(varIterator->first);
 		while(variableValue.find(macroName) != string::npos)
 		  variableValue.replace(variableValue.find(macroName), macroName.size(), varIterator->second);
 	      }
@@ -273,6 +405,16 @@ private: // Private member functions
     return 0;
   }
 
+  void UsedVariable(string varName)
+  {
+    usedVariables.push_back(varName);
+  }
+  void UsedStruct(string structName, string varName)
+  {
+    usedStructs[structName].push_back(varName);
+  }
+
+
 private: // Private variables
   string filename;
   string variableDelimiter;
@@ -280,8 +422,10 @@ private: // Private variables
   string lineOverflowDelimiter;
   map<string,string> variables;
   map<string,map<string, string> > structs;
+  vector<string> usedVariables;
+  map<string,vector<string> > usedStructs;
   int argc;
   char **argv;
 };
-
+}
 #endif

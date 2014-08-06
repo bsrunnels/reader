@@ -9,3 +9,8 @@ $test_double_vector 0.1 1.1 \\
 $test_struct {
     $test_struct_double  2.71828
 }
+
+$test_var_macro 88
+$test_struct_macro{
+    $var $test_var_macro
+}

@@ -25,11 +25,12 @@
   }
 
 
+//#define MUPARSER
 #include "Reader.h"
 
 int main(int argc, char ** argv)
 {
-  Reader r("test.in",argc,argv);
+  Reader::Reader r("test.in",argc,argv);
   string test_cpp_string;  r.Read<string>("test_cpp_string", &test_cpp_string);
   READER_TEST(test_cpp_string == "This is a C++ string", "C++ String");
   char*  test_c_string;    r.Read<char*>("test_c_string",  &test_c_string);
@@ -46,4 +47,10 @@ int main(int argc, char ** argv)
 	      "Double vector (multiline)");
   double test_struct_double; r.Read<double>("test_struct", "test_struct_double",  &test_struct_double);
   READER_TEST(fabs(test_struct_double - 2.71828) < 1E-16, "Struct double");
+  
+
+  double test_struct_macro = r.Read<double>("test_struct_macro","var");
+  READER_TEST(fabs(test_struct_macro - 88) < 1E-16, "Struct macro");
+  r.PrintUnusedVariableWarnings();
 }
+

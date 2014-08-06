@@ -10,15 +10,22 @@
 #include <stdexcept>
 #include <stdlib.h>
 #include <cstring>
+#include <cmath>
 
 #include "Exception.h"
 
+#ifdef MUPARSER
+#include "muParser.h"
+#endif
+
 using namespace std;
+
+namespace Reader
+{
 
 template<class T> struct Interpreter;
 
 #ifdef MUPARSER
-#include "muParser.h"
 double EvaluateMath(const string varUnparsed)
 {
   try
@@ -151,7 +158,7 @@ template<> struct Interpreter<vector<double> >
     READER_CATCH_MSG("Error parsing vector<double>: " << varUnparsed);
   }
 };
-
+}
 
 
 #endif
