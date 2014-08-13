@@ -405,7 +405,7 @@ private: // Private member functions
 		  continue;
 
 		// File away the variable Label and Value into strings
-		istringstream iss(line); 
+		std::istringstream iss(line); 
 		string variableLabel; iss >> variableLabel;
 		if (!StringUtils::beginsWith(variableLabel,variableDelimiter))
 		  READER_NEW_EXCEPTION("Variable not delimited properly: label= " << variableLabel);
@@ -436,7 +436,7 @@ private: // Private member functions
 	// 4. Store all variable declarations in the map
 	if (StringUtils::contains(line, variableDelimiter))
 	  {
-	    istringstream iss(line); 
+	    std::istringstream iss(line); 
 	    string variableLabel; iss >> variableLabel;
 	    if (!StringUtils::beginsWith(variableLabel,variableDelimiter))
 	      READER_NEW_EXCEPTION("Variable not delimited properly: label= " << variableLabel);
