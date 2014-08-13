@@ -33,7 +33,7 @@ class Reader
 public:
   //
   // Constructors
-  // {{{
+  // 
   Reader() {variableDelimiter="$";commentDelimiter="#";lineOverflowDelimiter="\\";readFileAndStoreData();}
   Reader(string _filename, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
     filename(_filename), 
@@ -61,11 +61,10 @@ public:
       READER_NEW_EXCEPTION("File \""<<filename<<"\" not found")
     readFileAndStoreData();
   }
-  // }}}
 
   // 
   // Finders
-
+  //
   bool Find(const string varName, VariableStatus status=ACTIVE)
   {
     UsedVariable(varName);
@@ -88,10 +87,27 @@ public:
     else
       return false;
   }
-  bool Find(const string structName, const string varName, VariableStatus status=ACTIVE)
+
+
+  ///
+  /// \fn Find
+  /// \brief Determine if a specified variable in a specified structure has been specified.
+  ///        If command line arguments have been passed then it checks there as well as the 
+  ///        input file.
+  ///
+  bool Find(const string structName,      ///< Name of the struct
+	    const string varName,         ///< Name of the variable in the struct
+	    VariableStatus status=ACTIVE) ///< Optional argument to specify variable status
   {
     UsedStruct(structName,varName);
-    if (structs[structName].find(varName) != structs[structName].end())
+    string varValueString;
+    if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
+	return true;
+      }
+    else if (structs.find(structName) != structs.end() &&
+	     structs[structName].find(varName) != structs[structName].end())
       {
 	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName  << " depricated, consider changing");
 	return true;
@@ -109,7 +125,10 @@ public:
     READER_TRY;
     UsedVariable(varName);
     Interpreter<Type> interpreter;
-    if (variables.find(varName) != variables.end())
+    string varValueString;
+    if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
+      interpreter(varValueString,varValue);
+    else if (variables.find(varName) != variables.end())
       interpreter(variables[varName], varValue);
     else
       READER_NEW_EXCEPTION("Variable \"" << varName << "\" not defined and no default specified");
@@ -122,19 +141,19 @@ public:
     UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
-    string varValue;
-    if (argc && searchCommandLineArgsForVariable(varName,varValue,argc,argv))
+    string varValueString;
+    if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
       {
-	Type retValue;
-	interpreter(varValue, &retValue);
-	return retValue;
+	Type varValue;
+	interpreter(varValueString, &varValue);
+	return varValue;
       }
     // Next attempt: is it located in the file?
     else if (variables.find(varName) != variables.end())
       {
-	Type retValue;
-	interpreter(variables[varName],&retValue);
-	return retValue;
+	Type varValue;
+	interpreter(variables[varName],&varValue);
+	return varValue;
       }
     // Can't find variable: scream at user
     else
@@ -148,21 +167,21 @@ public:
     UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
-    string varValue;
-    if (argc && searchCommandLineArgsForVariable(varName,varValue,argc,argv))
+    string varValueString;
+    if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
       {
-	Type retValue;
-	interpreter(varValue, &retValue);
+	Type varValue;
+	interpreter(varValueString, &varValue);
 	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
-	return retValue;
+	return varValue;
       }
     // Next attempt: is it located in the file?
     else if (variables.find(varName) != variables.end())
       {
-	Type retValue;
-	interpreter(variables[varName],&retValue);
+	Type varValue;
+	interpreter(variables[varName],&varValue);
 	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
-	return retValue;
+	return varValue;
       }
     // All else fails: return default value
     else
@@ -176,18 +195,30 @@ public:
 
   //
   // Struct Readers
+  //
 
   template<class Type>
-  void Read(const string structName, const string varName, Type *varValue)
+  void Read(const string structName, const string varName, Type *varValue, VariableStatus status=ACTIVE)
   {
     READER_TRY;
     UsedStruct(structName,varName);
     Interpreter<Type> interpreter;
-    if (structs.find(structName) == structs.end()) 
-      READER_NEW_EXCEPTION("Struct \"" << varName << "\" not defined and no default specified");
-    if (structs[structName].find(varName) == structs[structName].end())
+    string varValueString;
+    
+    if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
+	interpreter(varValueString,varValue);
+      }
+    else if (structs.find(structName) != structs.end() &&
+	     structs[structName].find(varName) != structs[structName].end())
+      {
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
+	interpreter(structs[structName][varName], varValue);
+      }
+    else
       READER_NEW_EXCEPTION("Variable \"" << structName << "." << varName << "\" not defined and no default specified");
-    interpreter(structs[structName][varName], varValue);
+    
     READER_CATCH_MSG("Error occurred while reading \"" << structName << "." << varName << "\"");
   }
 
@@ -207,21 +238,28 @@ public:
   {
     READER_TRY;
     UsedStruct(structName,varName);
-    if (!Find(structName, varName))
+    Interpreter<Type> interpreter;
+    string varValueString;
+    if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
       {
-	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
-	return defaultValue;
+	Type varValue;
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
+	interpreter(varValueString,&varValue);
+	return varValue;
+      }
+    else if (structs.find(structName) != structs.end() &&
+	     structs[structName].find(varName) != structs[structName].end())
+      {
+	Type varValue;
+	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
+	interpreter(structs[structName][varName], &varValue);
+	return varValue;
       }
     else
-      {
-	Type retValue;
-	Read<Type>(structName, varName, &retValue);
-	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
-	return retValue;
-      }
-    READER_CATCH;
+      return defaultValue;
+    
+    READER_CATCH_MSG("Error occurred while reading \"" << structName << "." << varName << "\"");
   }
-
 
   void PrintUnusedVariableWarnings()
   {
@@ -266,6 +304,27 @@ private: // Private member functions
 	    return true;
 	  }
 	else if (line.find("-D"+varName) == 0)
+	  {
+	    varValue="";
+	    return true;
+	  }
+      }
+    return false;
+    READER_CATCH;
+  }
+
+  bool searchCommandLineArgsForVariable(string structName, string varName, string &varValue, int argc, char **argv)
+  {
+    READER_TRY;
+    for (int i=0; i<argc; i++)
+      {
+	string line(argv[i]);
+	if (line.find("-D"+structName+"."+varName+"=") == 0)
+	  {
+	    varValue= line.replace(0, structName.size() + varName.size()+4, "");
+	    return true;
+	  }
+	else if (line.find("-D"+structName+"."+varName) == 0)
 	  {
 	    varValue="";
 	    return true;
