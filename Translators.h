@@ -124,7 +124,7 @@ template<> struct Interpreter<vector<float> >
   void operator() (const string varUnparsed, vector<float> *varParsed)
   {
     READER_TRY;
-    istringstream iss(varUnparsed); 
+    std::istringstream iss(varUnparsed); 
     string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
@@ -146,7 +146,7 @@ template<> struct Interpreter<vector<double> >
   void operator() (const string varUnparsed, vector<double> *varParsed)
   {
     READER_TRY;
-    istringstream iss(varUnparsed); 
+    std::istringstream iss(varUnparsed); 
     string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
