@@ -35,6 +35,7 @@ public:
   // Constructors
   // 
   Reader() {variableDelimiter="$";commentDelimiter="#";lineOverflowDelimiter="\\";readFileAndStoreData();}
+
   Reader(string _filename, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
     filename(_filename), 
     argc(0),
@@ -61,6 +62,15 @@ public:
       READER_NEW_EXCEPTION("File \""<<filename<<"\" not found")
     readFileAndStoreData();
   }
+
+  Reader(int _argc, char ** _argv, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
+    argc(_argc),
+    argv(_argv),
+    variableDelimiter(_variableDelimiter), 
+    commentDelimiter(_commentDelimiter), 
+    lineOverflowDelimiter(_lineOverflowDelimiter)
+  {}
+
 
   // 
   // Finders
