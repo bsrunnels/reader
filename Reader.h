@@ -318,6 +318,11 @@ private: // Private member functions
 	    varValue="";
 	    return true;
 	  }
+	else if (line.find("-D"+varName+".") == 0)
+	  {
+	    varValue="";
+	    return true;
+	  }
       }
     return false;
     READER_CATCH;
