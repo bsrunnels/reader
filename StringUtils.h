@@ -34,6 +34,15 @@ int deleteAfter(string &str, const string find)
   READER_CATCH;
 }
 
+int deleteBefore(string &str, const string find)
+{
+  READER_TRY;
+  if (str.find(find) != string::npos)
+    str.erase(0,str.find(find));
+  return 0;
+  READER_CATCH;
+}
+
 bool contains(string &str, const string find)
 {
   if (str.find(find) != string::npos) return true;

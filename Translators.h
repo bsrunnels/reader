@@ -11,8 +11,10 @@
 #include <stdlib.h>
 #include <cstring>
 #include <cmath>
+#include <complex>
 
 #include "Exception.h"
+#include "StringUtils.h"
 
 #ifdef MUPARSER
 #include "muParser.h"
@@ -72,6 +74,28 @@ template<> struct Interpreter<char *>
     READER_CATCH_MSG("Error parsing string: " << varUnparsed);
   }
 };
+
+// chars
+
+template<> struct Interpreter<vector<char> >
+{
+  void operator() (const string varUnparsed, vector<char> *varParsed)
+  {
+    READER_TRY;
+    std::istringstream iss(varUnparsed); 
+    string token;
+    for (unsigned int i=0; iss >> token ;i++)
+      {
+	if (i<varParsed->size())
+	  (*varParsed)[i] = token.at(0);
+	else
+	  (*varParsed).push_back(token.at(0));
+      }
+    READER_CATCH_MSG("Error parsing vector<char>: " << varUnparsed);
+  }
+};
+
+
 
 //
 // integer
@@ -154,6 +178,31 @@ template<> struct Interpreter<vector<double> >
 	  (*varParsed)[i] = EvaluateMath(token);
 	else
 	  (*varParsed).push_back(EvaluateMath(token));
+      }
+    READER_CATCH_MSG("Error parsing vector<double>: " << varUnparsed);
+  }
+};
+
+//
+// complex vector
+//
+
+template<> struct Interpreter<vector<complex<double> > >
+{
+  void operator() (const string varUnparsed, vector<complex<double> > *varParsed)
+  {
+    READER_TRY;
+    std::istringstream iss(varUnparsed); 
+    string token;
+    for (unsigned int i=0; iss >> token ;i++)
+      {
+	string re=token, im=token;
+	Reader::StringUtils::deleteAfter(re,"+i");
+	Reader::StringUtils::deleteBefore(im,"+i");
+	if (i<varParsed->size())
+	  (*varParsed)[i] = complex<double>(atof(re.c_str()),atof(im.c_str()));
+	else
+	  (*varParsed).push_back(complex<double>(atof(re.c_str()),atof(im.c_str())));
       }
     READER_CATCH_MSG("Error parsing vector<double>: " << varUnparsed);
   }
