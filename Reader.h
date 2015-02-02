@@ -381,7 +381,7 @@ private: // Private member functions
 	    string includeFileName = line.replace(line.find(include),include.size(),"");
 	    Reader includeReader(includeFileName, variableDelimiter, commentDelimiter,lineOverflowDelimiter);
 	    variables.insert(includeReader.variables.begin(),includeReader.variables.end());
-	    usedVariables.insert(includeReader.usedVariables.begin(),includeReader.usedVariables.end());
+	    usedVariables.insert(usedVariables.end(), includeReader.usedVariables.begin(),includeReader.usedVariables.end());
 	  }
 
 	// 3. Store all structs
