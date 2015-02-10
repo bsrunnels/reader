@@ -313,7 +313,7 @@ private: // Private member functions
 	    varValue= line.replace(0, varName.size()+3, "");
 	    return true;
 	  }
-	else if (line.find("-D"+varName+" ") == 0)
+	else if (line.find("-D"+varName) == 0  && line.size() == varName.size()+2)
 	  {
 	    varValue="";
 	    return true;
@@ -339,7 +339,7 @@ private: // Private member functions
 	    varValue= line.replace(0, structName.size() + varName.size()+4, "");
 	    return true;
 	  }
-	else if (line.find("-D"+structName+"."+varName+" ") == 0)
+	else if (line.find("-D"+structName+".") == 0 && line.size() == varName.size()+structName.size()+3)
 	  {
 	    varValue="";
 	    return true;
