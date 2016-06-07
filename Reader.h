@@ -15,8 +15,6 @@
 #include "muParser.h"
 #include "StringUtils.h"
 
-using namespace std;
-
 #define READER_DEPRICATED true
 
 namespace Reader
@@ -36,20 +34,20 @@ public:
   // 
   Reader() {variableDelimiter="$";commentDelimiter="#";lineOverflowDelimiter="\\";readFileAndStoreData();}
 
-  Reader(string _filename, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
+  Reader(std::string _filename, std::string _variableDelimiter="$", std::string _commentDelimiter="#", std::string _lineOverflowDelimiter="\\"):
     filename(_filename), 
     argc(0),
     variableDelimiter(_variableDelimiter), 
     commentDelimiter(_commentDelimiter), 
     lineOverflowDelimiter(_lineOverflowDelimiter)
   {
-    ifstream test(filename.c_str());
+    std::ifstream test(filename.c_str());
     if(!test)
       READER_NEW_EXCEPTION("File \""<<filename<<"\" not found");
     readFileAndStoreData();
   }
   
-  Reader(string _filename, int _argc, char ** _argv, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
+  Reader(std::string _filename, int _argc, char ** _argv, std::string _variableDelimiter="$", std::string _commentDelimiter="#", std::string _lineOverflowDelimiter="\\"):
     filename(_filename), 
     argc(_argc),
     argv(_argv),
@@ -57,13 +55,13 @@ public:
     commentDelimiter(_commentDelimiter), 
     lineOverflowDelimiter(_lineOverflowDelimiter)
   {
-    ifstream test(filename.c_str());
+    std::ifstream test(filename.c_str());
     if(!test)
       READER_NEW_EXCEPTION("File \""<<filename<<"\" not found")
     readFileAndStoreData();
   }
 
-  Reader(int _argc, char ** _argv, string _variableDelimiter="$", string _commentDelimiter="#", string _lineOverflowDelimiter="\\"):
+  Reader(int _argc, char ** _argv, std::string _variableDelimiter="$", std::string _commentDelimiter="#", std::string _lineOverflowDelimiter="\\"):
     argc(_argc),
     argv(_argv),
     variableDelimiter(_variableDelimiter), 
@@ -75,10 +73,10 @@ public:
   // 
   // Finders
   //
-  bool Find(const string varName, VariableStatus status=ACTIVE)
+  bool Find(const std::string varName, VariableStatus status=ACTIVE)
   {
     UsedVariable(varName);
-    string varValue;
+    std::string varValue;
     if (argc && searchCommandLineArgsForVariable(varName,varValue,argc,argv))
       {
 	if (status==DEPRICATED) READER_WARNING("Input " << varName << " depricated, consider changing");
@@ -105,12 +103,12 @@ public:
   ///        If command line arguments have been passed then it checks there as well as the 
   ///        input file.
   ///
-  bool Find(const string structName,      ///< Name of the struct
-	    const string varName,         ///< Name of the variable in the struct
+  bool Find(const std::string structName,      ///< Name of the struct
+	    const std::string varName,         ///< Name of the variable in the struct
 	    VariableStatus status=ACTIVE) ///< Optional argument to specify variable status
   {
     UsedStruct(structName,varName);
-    string varValueString;
+    std::string varValueString;
     if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
       {
 	if (status==DEPRICATED) READER_WARNING("Input " << structName << "." << varName << " depricated, consider changing");
@@ -130,12 +128,12 @@ public:
   // Variable Readers
 
   template<class Type>
-  void Read(const string varName, Type *varValue)
+  void Read(const std::string varName, Type *varValue)
   {
     READER_TRY;
     UsedVariable(varName);
     Interpreter<Type> interpreter;
-    string varValueString;
+    std::string varValueString;
     if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
       interpreter(varValueString,varValue);
     else if (variables.find(varName) != variables.end())
@@ -145,13 +143,13 @@ public:
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
   template<class Type>
-  Type Read(const string varName, VariableStatus status=ACTIVE)
+  Type Read(const std::string varName, VariableStatus status=ACTIVE)
   {
     READER_TRY;
     UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
-    string varValueString;
+    std::string varValueString;
     if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
       {
 	Type varValue;
@@ -171,13 +169,13 @@ public:
     READER_CATCH_MSG("Error occurred while reading variable \"" << varName << "\"");
   }
   template<class Type>
-  Type Read(const string varName, Type defaultValue, VariableStatus status=ACTIVE)
+  Type Read(const std::string varName, Type defaultValue, VariableStatus status=ACTIVE)
   {
     READER_TRY;
     UsedVariable(varName);
     Interpreter<Type> interpreter;
     // First attempt: did user specify in the command line?
-    string varValueString;
+    std::string varValueString;
     if (argc && searchCommandLineArgsForVariable(varName,varValueString,argc,argv))
       {
 	Type varValue;
@@ -208,12 +206,12 @@ public:
   //
 
   template<class Type>
-  void Read(const string structName, const string varName, Type *varValue, VariableStatus status=ACTIVE)
+  void Read(const std::string structName, const std::string varName, Type *varValue, VariableStatus status=ACTIVE)
   {
     READER_TRY;
     UsedStruct(structName,varName);
     Interpreter<Type> interpreter;
-    string varValueString;
+    std::string varValueString;
     
     if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
       {
@@ -233,7 +231,7 @@ public:
   }
 
   template<class Type>
-  Type Read(const string structName, const string varName)
+  Type Read(const std::string structName, const std::string varName)
   {
     READER_TRY;
     UsedStruct(structName,varName);
@@ -244,12 +242,12 @@ public:
   }
 
   template<class Type>
-  Type Read(const string structName, const string varName, Type defaultValue, VariableStatus status=ACTIVE)
+  Type Read(const std::string structName, const std::string varName, Type defaultValue, VariableStatus status=ACTIVE)
   {
     READER_TRY;
     UsedStruct(structName,varName);
     Interpreter<Type> interpreter;
-    string varValueString;
+    std::string varValueString;
     if (argc && searchCommandLineArgsForVariable(structName,varName,varValueString,argc,argv))
       {
 	Type varValue;
@@ -273,7 +271,7 @@ public:
 
   void PrintUnusedVariableWarnings()
   {
-    for (map<string,string>::iterator pVariables = variables.begin();
+    for (std::map<std::string,std::string>::iterator pVariables = variables.begin();
 	 pVariables != variables.end();
 	 pVariables++)
       {
@@ -281,11 +279,11 @@ public:
 	  READER_WARNING("Variable " << READER_COLOR_FG_BLUE << pVariables->first << READER_COLOR_RESET << " specified but not used");
       }
 
-    for (map<string,map<string,string> >::iterator pStructs = structs.begin();
+    for (std::map<std::string,std::map<std::string,std::string> >::iterator pStructs = structs.begin();
 	 pStructs != structs.end();
 	 pStructs++)
       {
-	for (map<string,string>::iterator pStructVariables = pStructs->second.begin();
+	for (std::map<std::string,std::string>::iterator pStructVariables = pStructs->second.begin();
 	     pStructVariables != pStructs->second.end();
 	     pStructVariables++)
 	  {
@@ -302,12 +300,12 @@ public:
 
 private: // Private member functions
 
-  bool searchCommandLineArgsForVariable(string varName, string &varValue, int argc, char **argv)
+  bool searchCommandLineArgsForVariable(std::string varName, std::string &varValue, int argc, char **argv)
   {
     READER_TRY;
     for (int i=0; i<argc; i++)
       {
-	string line(argv[i]);
+	std::string line(argv[i]);
 	if (line.find("-D"+varName+"=") == 0)
 	  {
 	    varValue= line.replace(0, varName.size()+3, "");
@@ -328,12 +326,12 @@ private: // Private member functions
     READER_CATCH;
   }
 
-  bool searchCommandLineArgsForVariable(string structName, string varName, string &varValue, int argc, char **argv)
+  bool searchCommandLineArgsForVariable(std::string structName, std::string varName, std::string &varValue, int argc, char **argv)
   {
     READER_TRY;
     for (int i=0; i<argc; i++)
       {
-	string line(argv[i]);
+	std::string line(argv[i]);
 	if (line.find("-D"+structName+"."+varName+"=") == 0)
 	  {
 	    varValue= line.replace(0, structName.size() + varName.size()+4, "");
@@ -351,34 +349,34 @@ private: // Private member functions
 
   int readFileAndStoreData()
   {
-    string line;
-    ifstream inputFile(filename.c_str());
+    std::string line;
+    std::ifstream inputFile(filename.c_str());
     while (getline(inputFile,line))
       {
 	// 0. Strip of all comments and remove excess whitespace
-	// if (line.find(commentDelimiter) != string::npos)
+	// if (line.find(commentDelimiter) != std::string::npos)
 	//   line.resize(line.find(commentDelimiter));
 	StringUtils::deleteAfter(line,commentDelimiter);
 	StringUtils::replaceAll(line, "  ", " ");
 
 	// 1. Mash multilines together
-	if (line.find(lineOverflowDelimiter) != string::npos)
+	if (line.find(lineOverflowDelimiter) != std::string::npos)
 	  {
-	    string anotherLine;
+	    std::string anotherLine;
 	    do 
 	      {
 		line.resize(line.find(lineOverflowDelimiter));
 		getline(inputFile,anotherLine);
 		line += anotherLine;
 	      }
-	    while (line.find(lineOverflowDelimiter)!=string::npos);
+	    while (line.find(lineOverflowDelimiter)!=std::string::npos);
 	  }
 
 	// 2. Include other files
-	string include("include ");
+	std::string include("include ");
 	if (line.find(include) == 0)
 	  {
-	    string includeFileName = line.replace(line.find(include),include.size(),"");
+	    std::string includeFileName = line.replace(line.find(include),include.size(),"");
 	    Reader includeReader(includeFileName, variableDelimiter, commentDelimiter,lineOverflowDelimiter);
 	    variables.insert(includeReader.variables.begin(),includeReader.variables.end());
 	    usedVariables.insert(usedVariables.end(), includeReader.usedVariables.begin(),includeReader.usedVariables.end());
@@ -394,9 +392,9 @@ private: // Private member functions
 	    if (!StringUtils::beginsWith(line, variableDelimiter))
 	      READER_NEW_EXCEPTION("Struct not delimited properly");
 	    StringUtils::replaceAll(line,variableDelimiter,"");
-	    string structLabel = line;
+	    std::string structLabel = line;
 
-	    map<string, string> structVariables;
+	    std::map<std::string, std::string> structVariables;
 	    do
 	      {
 		if (!getline(inputFile,line))
@@ -407,7 +405,7 @@ private: // Private member functions
 		StringUtils::replaceAll(line, "  ", " ");
 
 		// Include any additional files
-		if (line.find(include) != string::npos)
+		if (line.find(include) != std::string::npos)
 		  {
 		    StringUtils::replaceFirst(line,"include","");
 		    StringUtils::replaceAll(line," ","");
@@ -422,23 +420,23 @@ private: // Private member functions
 
 		// File away the variable Label and Value into strings
 		std::istringstream iss(line); 
-		string variableLabel; iss >> variableLabel;
+		std::string variableLabel; iss >> variableLabel;
 		if (!StringUtils::beginsWith(variableLabel,variableDelimiter))
 		  READER_NEW_EXCEPTION("Variable not delimited properly: label= " << variableLabel);
 		StringUtils::replaceAll(variableLabel,variableDelimiter,"");
-		string variableValue; string token;
+		std::string variableValue; std::string token;
 		iss >> variableValue;
 		while (iss>>token)
 		  variableValue += " " + token;
 
 		// Replace Macros
-		map<string,string>::iterator varIterator;
+		std::map<std::string,std::string>::iterator varIterator;
 		for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
 		  {
-		    string macroName = variableDelimiter + varIterator->first;
-		    if (variableValue.find(macroName) != string::npos)
+		    std::string macroName = variableDelimiter + varIterator->first;
+		    if (variableValue.find(macroName) != std::string::npos)
 		      UsedVariable(varIterator->first);
-		    while(variableValue.find(macroName) != string::npos)
+		    while(variableValue.find(macroName) != std::string::npos)
 		      variableValue.replace(variableValue.find(macroName), macroName.size(), varIterator->second);
 		  }
 
@@ -453,23 +451,23 @@ private: // Private member functions
 	if (StringUtils::contains(line, variableDelimiter))
 	  {
 	    std::istringstream iss(line); 
-	    string variableLabel; iss >> variableLabel;
+	    std::string variableLabel; iss >> variableLabel;
 	    if (!StringUtils::beginsWith(variableLabel,variableDelimiter))
 	      READER_NEW_EXCEPTION("Variable not delimited properly: label= " << variableLabel);
 	    StringUtils::replaceAll(variableLabel,variableDelimiter,"");
-	    string variableValue; string token;
+	    std::string variableValue; std::string token;
 	    iss >> variableValue;
 	    while (iss>>token)
 	      variableValue += " " + token;
 	    
 	    // 4.1 Replace all macros,
-	    map<string,string>::iterator varIterator;
+	    std::map<std::string,std::string>::iterator varIterator;
 	    for (varIterator = variables.begin(); varIterator != variables.end(); varIterator++)
 	      {
-		string macroName = variableDelimiter + varIterator->first;
-		if (variableValue.find(macroName) != string::npos)
+		std::string macroName = variableDelimiter + varIterator->first;
+		if (variableValue.find(macroName) != std::string::npos)
 		  UsedVariable(varIterator->first);
-		while(variableValue.find(macroName) != string::npos)
+		while(variableValue.find(macroName) != std::string::npos)
 		  variableValue.replace(variableValue.find(macroName), macroName.size(), varIterator->second);
 	      }
 	    variables.insert(make_pair(variableLabel,variableValue));
@@ -480,25 +478,25 @@ private: // Private member functions
     return 0;
   }
 
-  void UsedVariable(string varName)
+  void UsedVariable(std::string varName)
   {
     usedVariables.push_back(varName);
   }
-  void UsedStruct(string structName, string varName)
+  void UsedStruct(std::string structName, std::string varName)
   {
     usedStructs[structName].push_back(varName);
   }
 
 
 private: // Private variables
-  string filename;
-  string variableDelimiter;
-  string commentDelimiter;
-  string lineOverflowDelimiter;
-  map<string,string> variables;
-  map<string,map<string, string> > structs;
-  vector<string> usedVariables;
-  map<string,vector<string> > usedStructs;
+  std::string filename;
+  std::string variableDelimiter;
+  std::string commentDelimiter;
+  std::string lineOverflowDelimiter;
+  std::map<std::string,std::string> variables;
+  std::map<std::string,std::map<std::string, std::string> > structs;
+  std::vector<std::string> usedVariables;
+  std::map<std::string,std::vector<std::string> > usedStructs;
   int argc;
   char **argv;
 };

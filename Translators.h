@@ -20,15 +20,13 @@
 #include "muParser.h"
 #endif
 
-using namespace std;
-
 namespace Reader
 {
 
 template<class T> struct Interpreter;
 
 #ifdef MUPARSER
-double EvaluateMath(const string varUnparsed)
+double EvaluateMath(const std::string varUnparsed)
 {
   try
     {
@@ -42,7 +40,7 @@ double EvaluateMath(const string varUnparsed)
     }
 }
 #else
-double EvaluateMath(const string varUnparsed)
+double EvaluateMath(const std::string varUnparsed)
 {
   READER_TRY;
   return atof(varUnparsed.c_str());
@@ -54,19 +52,19 @@ double EvaluateMath(const string varUnparsed)
 // Strings
 // 
 
-template<> struct Interpreter<string>
+template<> struct Interpreter<std::string>
 {
-  void operator() (const string varUnparsed, string *varParsed)
+  void operator() (const std::string varUnparsed, std::string *varParsed)
   {
     READER_TRY;
     *varParsed = varUnparsed;
-    READER_CATCH_MSG("Error parsing string: " << varUnparsed);
+    READER_CATCH_MSG("Error parsing std::string: " << varUnparsed);
   }
 };
 
 template<> struct Interpreter<char *>
 {
-  void operator() (const string varUnparsed, char **varParsed)
+  void operator() (const std::string varUnparsed, char **varParsed)
   {
     READER_TRY;
     *varParsed = (char*)malloc(varUnparsed.size());
@@ -77,13 +75,13 @@ template<> struct Interpreter<char *>
 
 // chars
 
-template<> struct Interpreter<vector<char> >
+template<> struct Interpreter<std::vector<char> >
 {
-  void operator() (const string varUnparsed, vector<char> *varParsed)
+  void operator() (const std::string varUnparsed, std::vector<char> *varParsed)
   {
     READER_TRY;
     std::istringstream iss(varUnparsed); 
-    string token;
+    std::string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
 	if (i<varParsed->size())
@@ -96,6 +94,44 @@ template<> struct Interpreter<vector<char> >
 };
 
 
+//
+// bool
+//
+template<> struct Interpreter<bool>
+{
+  void operator() (const std::string varUnparsed, bool *varParsed)
+  {
+    READER_TRY;
+    if
+      (varUnparsed.compare("True") == 0 ||
+       varUnparsed.compare("true") == 0 ||
+       varUnparsed.compare("T")    == 0 ||
+       varUnparsed.compare("t")    == 0 ||
+       varUnparsed.compare("Yes")  == 0 ||
+       varUnparsed.compare("yes")  == 0 ||
+       varUnparsed.compare("Y")    == 0 ||
+       varUnparsed.compare("y")    == 0 ||
+       varUnparsed.compare("1")    == 0 )
+      *varParsed = true;
+    else if 
+      (varUnparsed.compare("False") == 0 ||
+       varUnparsed.compare("false") == 0 ||
+       varUnparsed.compare("F")     == 0 ||
+       varUnparsed.compare("f")     == 0 ||
+       varUnparsed.compare("No")    == 0 ||
+       varUnparsed.compare("no")    == 0 ||
+       varUnparsed.compare("N")     == 0 ||
+       varUnparsed.compare("n")     == 0 ||
+       varUnparsed.compare("0")     == 0 )
+      *varParsed = false;
+    else
+      READER_NEW_EXCEPTION("Unacceptable boolean value");
+
+    READER_CATCH_MSG("Error parsing string: " << varUnparsed);
+  }
+};
+
+
 
 //
 // integer
@@ -103,7 +139,7 @@ template<> struct Interpreter<vector<char> >
 
 template<> struct Interpreter<int>
 {
-  void operator() (const string varUnparsed, int *varParsed)
+  void operator() (const std::string varUnparsed, int *varParsed)
   {
     READER_TRY;
     *varParsed = (int)(EvaluateMath(varUnparsed));
@@ -117,7 +153,7 @@ template<> struct Interpreter<int>
 
 template<> struct Interpreter<float>
 {
-  void operator() (const string varUnparsed, float *varParsed)
+  void operator() (const std::string varUnparsed, float *varParsed)
   {
     READER_TRY;
     *varParsed = EvaluateMath(varUnparsed);
@@ -131,7 +167,7 @@ template<> struct Interpreter<float>
 
 template<> struct Interpreter<double>
 {
-  void operator() (const string varUnparsed, double *varParsed)
+  void operator() (const std::string varUnparsed, double *varParsed)
   {
     READER_TRY;
     *varParsed = EvaluateMath(varUnparsed);
@@ -143,13 +179,13 @@ template<> struct Interpreter<double>
 // float vector
 // 
 
-template<> struct Interpreter<vector<float> >
+template<> struct Interpreter<std::vector<float> >
 {
-  void operator() (const string varUnparsed, vector<float> *varParsed)
+  void operator() (const std::string varUnparsed, std::vector<float> *varParsed)
   {
     READER_TRY;
     std::istringstream iss(varUnparsed); 
-    string token;
+    std::string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
 	if (i<varParsed->size())
@@ -165,13 +201,13 @@ template<> struct Interpreter<vector<float> >
 // double vector
 // 
 
-template<> struct Interpreter<vector<double> >
+template<> struct Interpreter<std::vector<double> >
 {
-  void operator() (const string varUnparsed, vector<double> *varParsed)
+  void operator() (const std::string varUnparsed, std::vector<double> *varParsed)
   {
     READER_TRY;
     std::istringstream iss(varUnparsed); 
-    string token;
+    std::string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
 	if (i<varParsed->size())
@@ -187,22 +223,22 @@ template<> struct Interpreter<vector<double> >
 // complex vector
 //
 
-template<> struct Interpreter<vector<complex<double> > >
+template<> struct Interpreter<std::vector<std::complex<double> > >
 {
-  void operator() (const string varUnparsed, vector<complex<double> > *varParsed)
+  void operator() (const std::string varUnparsed, std::vector<std::complex<double> > *varParsed)
   {
     READER_TRY;
     std::istringstream iss(varUnparsed); 
-    string token;
+    std::string token;
     for (unsigned int i=0; iss >> token ;i++)
       {
-	string re=token, im=token;
+	std::string re=token, im=token;
 	Reader::StringUtils::deleteAfter(re,"+i");
 	Reader::StringUtils::deleteBefore(im,"+i");
 	if (i<varParsed->size())
-	  (*varParsed)[i] = complex<double>(atof(re.c_str()),atof(im.c_str()));
+	  (*varParsed)[i] = std::complex<double>(atof(re.c_str()),atof(im.c_str()));
 	else
-	  (*varParsed).push_back(complex<double>(atof(re.c_str()),atof(im.c_str())));
+	  (*varParsed).push_back(std::complex<double>(atof(re.c_str()),atof(im.c_str())));
       }
     READER_CATCH_MSG("Error parsing vector<double>: " << varUnparsed);
   }

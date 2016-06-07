@@ -13,7 +13,7 @@
     std::cout << "Reader Warning: ";					\
     std::cout << READER_COLOR_RESET;					\
     std::cout << MESSAGE;						\
-    std::cout << endl;							\
+    std::cout << std::endl;						\
   }
 
 #endif // UTILS_WARNING_H
