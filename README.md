@@ -5,7 +5,7 @@ This is a simple C++ templated header file library.
 ### Installation ###
 
 * Clone the repository
-    git clone https://bsrunnels@bitbucket.org/bsrunnels/reader.git
+  ''''git clone https://bsrunnels@bitbucket.org/bsrunnels/reader.git''''
 * Version
 * [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
