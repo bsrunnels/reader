@@ -1,10 +1,10 @@
-# README #
+# Reader - generic input file parser #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+This is a simple C++ templated header file library.
 
-### What is this repository for? ###
+### Installation ###
 
-* Quick summary
+* Clone the repository
 * Version
 * [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
@@ -23,7 +23,6 @@ This README would normally document whatever steps are necessary to get your app
 * Code review
 * Other guidelines
 
-### Who do I talk to? ###
+### Contact information ###
 
-* Repo owner or admin
-* Other community or team contact
+[Brandon Runnels](mailto:brunnels@uccs.edu)
