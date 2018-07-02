@@ -47,10 +47,13 @@ int main(int argc, char ** argv)
 	      "Double vector (multiline)");
   double test_struct_double; r.Read<double>("test_struct", "test_struct_double",  &test_struct_double);
   READER_TEST(fabs(test_struct_double - 2.71828) < 1E-16, "Struct double");
-  
-
   double test_struct_macro = r.Read<double>("test_struct_macro","var");
   READER_TEST(fabs(test_struct_macro - 88) < 1E-16, "Struct macro");
+
+  std::cout << std::endl << "The following test only works if compiled with muparser" << std::endl;
+  double test_muparser; r.Read<double>("test_muparser",&test_muparser);
+  READER_TEST(fabs(test_muparser - 7.5) < 1E-16, "Muparser");
+
   r.PrintUnusedVariableWarnings();
 }
 

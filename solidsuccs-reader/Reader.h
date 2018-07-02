@@ -12,8 +12,11 @@
 #include "Exception.h"
 #include "Warning.h"
 #include "Color.h"
-#include "muParser.h"
 #include "StringUtils.h"
+
+#ifdef MUPARSER
+#include "muParser.h"
+#endif
 
 #define READER_DEPRICATED true
 
@@ -126,6 +129,7 @@ public:
 
   // 
   // Variable Readers
+  //
 
   template<class Type>
   void Read(const std::string varName, Type *varValue)
@@ -357,7 +361,14 @@ private: // Private member functions
 	// if (line.find(commentDelimiter) != std::string::npos)
 	//   line.resize(line.find(commentDelimiter));
 	StringUtils::deleteAfter(line,commentDelimiter);
+	ignoreStrings.push_back("=");
+	ignoreStrings.push_back("[");
+	ignoreStrings.push_back("]");
+	ignoreStrings.push_back(",");
+	for (int i = 0; i < ignoreStrings.size(); i++)
+	  StringUtils::replaceAll(line, ignoreStrings[i], " ");
 	StringUtils::replaceAll(line, "  ", " ");
+	    
 
 	// 1. Mash multilines together
 	if (line.find(lineOverflowDelimiter) != std::string::npos)
@@ -493,6 +504,7 @@ private: // Private variables
   std::string variableDelimiter;
   std::string commentDelimiter;
   std::string lineOverflowDelimiter;
+  std::vector<std::string> ignoreStrings;
   std::map<std::string,std::string> variables;
   std::map<std::string,std::map<std::string, std::string> > structs;
   std::vector<std::string> usedVariables;

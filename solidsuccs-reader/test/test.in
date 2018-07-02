@@ -14,3 +14,8 @@ $test_var_macro 88
 $test_struct_macro{
     $var $test_var_macro
 }
+
+# Only works if compiled with MUPARSER
+
+$test_muparser      0.0 + cos(0)*sqrt(15^2)/2.0
+
